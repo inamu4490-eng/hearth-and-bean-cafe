@@ -416,7 +416,12 @@
     <span class="chat-toggle-label">Ask us</span>
   </button>
 
-  <section class="chat-panel" id="chatPanel" role="dialog" aria-label="Hearth & Bean café assistant chat" hidden>
+  <!--
+    data-chat-endpoint: URL of the deployed Cloudflare Worker's /chat route
+    (see worker/README.md). Leave empty to run in offline/rule-based mode only.
+  -->
+  <section class="chat-panel" id="chatPanel" role="dialog" aria-label="Hearth & Bean café assistant chat" hidden
+    data-chat-endpoint="https://hearth-bean-chat.YOUR-SUBDOMAIN.workers.dev/chat">
     <header class="chat-panel-header">
       <div>
         <h2>Hearth &amp; Bean Assistant</h2>

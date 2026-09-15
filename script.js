@@ -129,7 +129,9 @@ if (newsletterForm) {
   });
 }
 
-// Café Assistant chat widget — rule-based, answers from on-page info only.
+// Café Assistant chat widget — asks an AI backend (see worker/README.md) and
+// falls back to local rule-based answers if that backend is unreachable or
+// not configured.
 (() => {
   const toggle = document.getElementById('chatToggle');
   const panel = document.getElementById('chatPanel');
@@ -137,9 +139,16 @@ if (newsletterForm) {
   const messagesEl = document.getElementById('chatMessages');
   const chatForm = document.getElementById('chatForm');
   const chatInput = document.getElementById('chatInput');
+  const chatSend = chatForm ? chatForm.querySelector('.chat-send') : null;
   const chips = document.getElementById('chatSuggestions');
 
   if (!toggle || !panel || !chatForm || !chatInput || !messagesEl) return;
+
+  const endpoint = panel.dataset.chatEndpoint || '';
+  const aiEnabled = Boolean(endpoint) && !endpoint.includes('YOUR-SUBDOMAIN');
+  const history = [];
+  const MAX_HISTORY = 8;
+  const REQUEST_TIMEOUT_MS = 15000;
 
   const topics = [
     {
@@ -192,16 +201,87 @@ if (newsletterForm) {
     return match ? match.reply : fallbackReply;
   }
 
-  function addMessage(text, sender) {
+  // isHTML must only be true for strings we authored ourselves (the local
+  // topic replies below, which contain hand-written <a> tags). AI-generated
+  // text is untrusted and always rendered as plain text to avoid HTML/script
+  // injection via model output.
+  function addMessage(text, sender, isHTML = false) {
     const el = document.createElement('div');
     el.className = `chat-msg ${sender}`;
-    if (sender === 'bot') {
+    if (isHTML) {
       el.innerHTML = text;
     } else {
       el.textContent = text;
     }
     messagesEl.appendChild(el);
     messagesEl.scrollTop = messagesEl.scrollHeight;
+    return el;
+  }
+
+  function addTyping() {
+    const el = document.createElement('div');
+    el.className = 'chat-msg bot typing';
+    el.setAttribute('aria-label', 'Assistant is typing');
+    el.innerHTML = '<span></span><span></span><span></span>';
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return el;
+  }
+
+  function pushHistory(role, content) {
+    history.push({ role, content });
+    if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY);
+  }
+
+  async function getAIReply(message) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, history }),
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`Chat backend responded ${res.status}`);
+      const data = await res.json();
+      if (!data || typeof data.reply !== 'string' || !data.reply.trim()) {
+        throw new Error('Chat backend returned no reply');
+      }
+      return data.reply.trim();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function respondTo(question) {
+    pushHistory('user', question);
+    const typingEl = addTyping();
+    const setBusy = (busy) => {
+      chatInput.disabled = busy;
+      if (chatSend) chatSend.disabled = busy;
+    };
+    setBusy(true);
+
+    if (aiEnabled) {
+      try {
+        const reply = await getAIReply(question);
+        typingEl.remove();
+        addMessage(reply, 'bot', false);
+        pushHistory('assistant', reply);
+        setBusy(false);
+        chatInput.focus();
+        return;
+      } catch (err) {
+        // Fall through to the local rule-based answer below.
+      }
+    }
+
+    typingEl.remove();
+    const reply = findReply(question);
+    addMessage(reply, 'bot', true);
+    setBusy(false);
+    chatInput.focus();
   }
 
   let greeted = false;
@@ -212,7 +292,7 @@ if (newsletterForm) {
     panel.hidden = false;
     toggle.setAttribute('aria-expanded', 'true');
     if (!greeted) {
-      addMessage('Hi! I’m the Hearth &amp; Bean assistant — ask me about our hours, menu, location, Wi-Fi, parking, dietary options, or how to reach us.', 'bot');
+      addMessage('Hi! I’m the Hearth &amp; Bean assistant — ask me about our hours, menu, location, Wi-Fi, parking, dietary options, or how to reach us.', 'bot', true);
       greeted = true;
     }
     chatInput.focus();
@@ -256,20 +336,22 @@ if (newsletterForm) {
   if (chips) {
     chips.querySelectorAll('.chat-chip').forEach(chip => {
       chip.addEventListener('click', () => {
+        if (chatInput.disabled) return;
         const question = chip.dataset.question;
         addMessage(question, 'user');
-        addMessage(findReply(question), 'bot');
+        respondTo(question);
       });
     });
   }
 
   chatForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (chatInput.disabled) return;
     const value = chatInput.value.trim();
     if (!value) return;
     addMessage(value, 'user');
-    addMessage(findReply(value), 'bot');
     chatInput.value = '';
+    respondTo(value);
   });
 
   // Explicit Enter-to-send: don't rely on implicit form submission, which

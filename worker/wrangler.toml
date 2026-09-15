@@ -1,0 +1,12 @@
+name = "hearth-bean-chat"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Restrict this to your real site origin before going live, e.g.
+# "https://<your-username>.github.io". "*" is fine for local testing only.
+[vars]
+ALLOWED_ORIGIN = "*"
+OPENAI_MODEL = "gpt-4o-mini"
+
+# OPENAI_API_KEY is a secret, not a var — never put it here or commit it.
+# Set it with: wrangler secret put OPENAI_API_KEY

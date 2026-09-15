@@ -1,3 +1,8 @@
 .DS_Store
 Thumbs.db
 *.log
+
+# Cloudflare Worker (chat backend)
+worker/node_modules/
+worker/.wrangler/
+worker/.dev.vars
