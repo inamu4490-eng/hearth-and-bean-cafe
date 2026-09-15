@@ -409,6 +409,42 @@
 
 <a href="#menu" class="btn btn-primary sticky-order">Order Now</a>
 
+<!-- Café Assistant Chat Widget -->
+<div class="chat-widget" id="chatWidget">
+  <button type="button" class="chat-toggle" id="chatToggle" aria-expanded="false" aria-controls="chatPanel">
+    <span class="chat-toggle-icon" aria-hidden="true">☕</span>
+    <span class="chat-toggle-label">Ask us</span>
+  </button>
+
+  <section class="chat-panel" id="chatPanel" role="dialog" aria-label="Hearth & Bean café assistant chat" hidden>
+    <header class="chat-panel-header">
+      <div>
+        <h2>Hearth &amp; Bean Assistant</h2>
+        <p>Ask about hours, menu, location &amp; more</p>
+      </div>
+      <button type="button" class="chat-close" id="chatClose" aria-label="Close chat">&times;</button>
+    </header>
+
+    <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Chat messages"></div>
+
+    <div class="chat-suggestions" id="chatSuggestions">
+      <button type="button" class="chat-chip" data-question="What are your hours?">Hours</button>
+      <button type="button" class="chat-chip" data-question="What's on the menu?">Menu</button>
+      <button type="button" class="chat-chip" data-question="Where are you located?">Location</button>
+      <button type="button" class="chat-chip" data-question="Do you have Wi-Fi?">Wi-Fi</button>
+      <button type="button" class="chat-chip" data-question="Is there parking?">Parking</button>
+      <button type="button" class="chat-chip" data-question="Do you have dietary options?">Dietary</button>
+      <button type="button" class="chat-chip" data-question="How can I contact you?">Contact</button>
+    </div>
+
+    <form class="chat-input-row" id="chatForm">
+      <label for="chatInput" class="visually-hidden">Type your question</label>
+      <input type="text" id="chatInput" name="chatInput" placeholder="Ask a question…" autocomplete="off" maxlength="200">
+      <button type="submit" class="btn btn-primary chat-send">Send</button>
+    </form>
+  </section>
+</div>
+
 <script src="script.js"></script>
 </body>
 </html>

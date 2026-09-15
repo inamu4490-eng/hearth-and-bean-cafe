@@ -128,3 +128,140 @@ if (newsletterForm) {
     }
   });
 }
+
+// Café Assistant chat widget — rule-based, answers from on-page info only.
+(() => {
+  const toggle = document.getElementById('chatToggle');
+  const panel = document.getElementById('chatPanel');
+  const closeBtn = document.getElementById('chatClose');
+  const messagesEl = document.getElementById('chatMessages');
+  const chatForm = document.getElementById('chatForm');
+  const chatInput = document.getElementById('chatInput');
+  const chips = document.getElementById('chatSuggestions');
+
+  if (!toggle || !panel || !chatForm || !chatInput || !messagesEl) return;
+
+  const topics = [
+    {
+      keywords: ['hour', 'hours', 'open', 'close', 'opening'],
+      reply: "We're open Monday–Friday 7:00am–6:00pm, Saturday 8:00am–6:00pm, and Sunday 8:00am–4:00pm. Holiday hours are 9:00am–2:00pm."
+    },
+    {
+      keywords: ['menu', 'coffee', 'latte', 'espresso', 'pastry', 'pastries', 'croissant', 'breakfast', 'food', 'price', 'cost'],
+      reply: 'Our menu features specialty coffee (Classic Latte $4.50, Pour Over $5.00, Iced Cortado $4.75), fresh pastries (Butter Croissant $3.25, Cinnamon Bun $4.00), and breakfast (Avocado Toast $8.50). See the full <a href="#menu">Menu</a> section for more.'
+    },
+    {
+      keywords: ['where', 'location', 'address', 'located', 'direction'],
+      reply: 'You’ll find us at 128 Maple Street, Portland, OR 97205. Check the map in our <a href="#visit">Visit</a> section for directions.'
+    },
+    {
+      keywords: ['wifi', 'wi-fi', 'internet', 'laptop'],
+      reply: 'Yes — we offer free Wi-Fi and have laptop-friendly tables, so feel free to bring your work along.'
+    },
+    {
+      keywords: ['park', 'parking'],
+      reply: "There's a free parking lot behind the building, plus metered street parking on Maple St."
+    },
+    {
+      keywords: ['vegan', 'vegetarian', 'gluten', 'dairy', 'allerg', 'dietary'],
+      reply: 'We offer oat and almond milk alternatives for any coffee drink, and several menu items can be made vegetarian. For specific allergy questions, please ask our staff in person or reach out via our <a href="#contact">Contact</a> form.'
+    },
+    {
+      keywords: ['contact', 'phone', 'call', 'email', 'reach'],
+      reply: 'You can reach us at <a href="tel:+15035550148">(503) 555-0148</a> or <a href="mailto:hello@hearthandbean.com">hello@hearthandbean.com</a>, or send a message through our <a href="#contact">Contact</a> form.'
+    },
+    {
+      keywords: ['order', 'reserve', 'reservation', 'book', 'table'],
+      reply: 'We don’t take orders through this chat yet — head to our <a href="#menu">Menu</a> and order at the counter, or tap the Order Now button to jump straight there.'
+    },
+    {
+      keywords: ['thank', 'thanks', 'thx'],
+      reply: "You're very welcome! Anything else I can help with?"
+    },
+    {
+      keywords: ['hello', 'hey', 'howdy', 'greetings'],
+      reply: 'Hi there! Ask me about our hours, menu, location, Wi-Fi, parking, dietary options, or how to contact us.'
+    }
+  ];
+
+  const fallbackReply = 'I’m not sure about that one — but you can reach our team at <a href="mailto:hello@hearthandbean.com">hello@hearthandbean.com</a> or <a href="tel:+15035550148">(503) 555-0148</a>, or browse the sections above.';
+
+  function findReply(text) {
+    const lower = text.toLowerCase();
+    const match = topics.find(topic => topic.keywords.some(kw => lower.includes(kw)));
+    return match ? match.reply : fallbackReply;
+  }
+
+  function addMessage(text, sender) {
+    const el = document.createElement('div');
+    el.className = `chat-msg ${sender}`;
+    if (sender === 'bot') {
+      el.innerHTML = text;
+    } else {
+      el.textContent = text;
+    }
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  let greeted = false;
+  let lastFocused = null;
+
+  function openChat() {
+    lastFocused = document.activeElement;
+    panel.hidden = false;
+    toggle.setAttribute('aria-expanded', 'true');
+    if (!greeted) {
+      addMessage('Hi! I’m the Hearth &amp; Bean assistant — ask me about our hours, menu, location, Wi-Fi, parking, dietary options, or how to reach us.', 'bot');
+      greeted = true;
+    }
+    chatInput.focus();
+  }
+
+  function closeChat() {
+    panel.hidden = true;
+    toggle.setAttribute('aria-expanded', 'false');
+    if (lastFocused && typeof lastFocused.focus === 'function') {
+      lastFocused.focus();
+    } else {
+      toggle.focus();
+    }
+  }
+
+  toggle.addEventListener('click', () => {
+    if (panel.hidden) {
+      openChat();
+    } else {
+      closeChat();
+    }
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeChat);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel.hidden) {
+      closeChat();
+    }
+  });
+
+  if (chips) {
+    chips.querySelectorAll('.chat-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const question = chip.dataset.question;
+        addMessage(question, 'user');
+        addMessage(findReply(question), 'bot');
+      });
+    });
+  }
+
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const value = chatInput.value.trim();
+    if (!value) return;
+    addMessage(value, 'user');
+    addMessage(findReply(value), 'bot');
+    chatInput.value = '';
+  });
+})();
