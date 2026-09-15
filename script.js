@@ -236,6 +236,13 @@ if (newsletterForm) {
     }
   });
 
+  // Jumping to an on-page section (e.g. #menu) from a reply should reveal
+  // it, not leave the chat panel covering it.
+  messagesEl.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href^="#"]');
+    if (link) closeChat();
+  });
+
   if (closeBtn) {
     closeBtn.addEventListener('click', closeChat);
   }
@@ -263,5 +270,18 @@ if (newsletterForm) {
     addMessage(value, 'user');
     addMessage(findReply(value), 'bot');
     chatInput.value = '';
+  });
+
+  // Explicit Enter-to-send: don't rely on implicit form submission, which
+  // some mobile keyboards and automation tools fail to trigger reliably.
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (typeof chatForm.requestSubmit === 'function') {
+        chatForm.requestSubmit();
+      } else {
+        chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    }
   });
 })();
